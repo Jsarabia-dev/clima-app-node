@@ -1,11 +1,23 @@
+const fs = require('fs');
+
 const axios = require('axios')
 
 class Busquedas {
 
-    historial = ["A", "B", "C"]
+    historial = []
+    dbPath = './db/database.json'
 
     constructor() {
-        // Leer de DB
+        this.leerDB()
+    }
+
+    get historialCapitalizado() {
+        return this.historial.map(lugar => {
+            let palabras = lugar.split(' ')
+            palabras = palabras.map( p => p[0].toUpperCase() + p.substring(1))
+            return palabras.join(' ')
+        })
+
     }
 
     get paramsMapBox() {
@@ -16,11 +28,11 @@ class Busquedas {
         }
     }
 
-     getParamsOpenWeathermap(lat, lon){
+    getParamsOpenWeathermap(lat, lon) {
         return {
-            'lat' : lat,
-            'lon' : lon,
-            'appid' : process.env.OPENWEATHER_KEY,
+            'lat': lat,
+            'lon': lon,
+            'appid': process.env.OPENWEATHER_KEY,
             'lang': 'es',
             'units': 'metric'
         }
@@ -59,7 +71,7 @@ class Busquedas {
                 params: this.getParamsOpenWeathermap(lat, lon)
             })
 
-            const {data} = await instance.get()
+            const { data } = await instance.get()
 
             return {
                 desc: data.weather[0].description,
@@ -71,6 +83,37 @@ class Busquedas {
         } catch (error) {
             console.log(error)
         }
+    }
+
+    agregarHistorial(lugar = '') {
+        //Prevenir duplicados
+        if (this.historial.includes(lugar.toLocaleLowerCase())) return;
+
+        // Grabar en array
+        this.historial.unshift(lugar.toLocaleLowerCase())
+
+        // Grabar en DB
+        this.guardarDB()
+    }
+
+    guardarDB() {
+
+        const payload = {
+            historial: this.historial
+        }
+
+        fs.writeFileSync(this.dbPath, JSON.stringify(payload))
+
+    }
+
+    leerDB() {
+        if (!fs.existsSync(this.dbPath)) return;
+
+        const info = fs.readFileSync(this.dbPath, { encoding: 'utf-8' })
+        const data = JSON.parse(info)
+
+        this.historial = data.historial
+
     }
 }
 
